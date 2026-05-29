@@ -220,6 +220,7 @@ Osh's tutorials playlist: <https://www.youtube.com/playlist?list=PLwJbTWLH-1dakB
         ctx: discord.ApplicationContext,
         launcher: discord.Option(str, choices=["Prism", "MultiMC", "Modrinth App", "Official Launcher", "MCSR Launcher", "All"], required=False, default="All"),
         os: discord.Option(str, choices=["Windows", "Linux", "macOS"], required=False, default="Windows"),
+        java_25: discord.Option(bool, "Whether to link the guide for Java 25", choices=[True, False], required=False, default=False),
         mention: discord.Option(discord.Member, "User to ping with the response", required=False, default=None),
     ):
         text = ""
@@ -228,26 +229,35 @@ Osh's tutorials playlist: <https://www.youtube.com/playlist?list=PLwJbTWLH-1dakB
             text += f"We do not recommend using the official Minecraft launcher since it is [tedious](<https://bit.ly/updatejavamc>) to switch Java versions. Type `/setup` to set up Prism for speedrunning.\n"
         elif launcher == "MCSR Launcher":
             text += "On MCSR Launcher, use this guide to update your Java version[:](https://gist.github.com/user-attachments/assets/60d308c6-5782-469a-a532-a2c57993881b.png) <https://gist.github.com/maskersss/ee30ca16d33e7b8bb51e246ff62c83d6>.\n"
+            if java_25: text += "You should install and select **Java 25** instead of Java 21.\n"
         elif launcher == "Prism":
             text += "On Prism, use this guide (timestamped) to update your Java version: <https://youtu.be/aaxASwZUPkQ?t=29>.\n"
+            if java_25: text += "You should install and select **Java 25** instead of Java 21.\n"
         elif launcher == "Modrinth App":
             text += "On Modrinth App, use this guide to update your Java version: <https://youtu.be/XeVKnvYEVSg>.\n"
+            if java_25: text += "You should install and select **Java 25** instead of Java 21.\n"
         elif launcher == "All":
-            text += "* If you're using Prism: use [**this video guide (timestamped)**](<https://youtu.be/aaxASwZUPkQ?t=29>) to update your Java version.\n"
-            text += "* If you're using Modrinth App: use [**this video guide**](<https://youtu.be/XeVKnvYEVSg>) to update your Java version.\n"
-            text += "* If you're using MultiMC: use [**this video guide**](<https://youtu.be/WGFEMkWilK0>) or [**this text guide**](<https://gist.github.com/maskersss/89428e4bb1cb64b4e7b9c6346dbf1732#multimc>) to update your Java version.\n"
-            text += f"* We do not recommend using the official Minecraft launcher since it is [tedious](<https://bit.ly/updatejavamc>) to switch Java versions. Type `/setup` to set up Prism for speedrunning.\n"
+            if java_25:
+                text += "Use [**this guide**](<https://gist.github.com/maskersss/574d81800bfd1051c4f3315ccc825c64>) to update your Java version to version 25.\n"
+            else:
+                text += "* If you're using Prism: use [**this video guide (timestamped)**](<https://youtu.be/aaxASwZUPkQ?t=29>) to update your Java version.\n"
+                text += "* If you're using Modrinth App: use [**this video guide**](<https://youtu.be/XeVKnvYEVSg>) to update your Java version.\n"
+                text += "* If you're using MultiMC: use [**this video guide**](<https://youtu.be/WGFEMkWilK0>) or [**this text guide**](<https://gist.github.com/maskersss/89428e4bb1cb64b4e7b9c6346dbf1732#multimc>) to update your Java version.\n"
+                text += f"* We do not recommend using the official Minecraft launcher since it is [tedious](<https://bit.ly/updatejavamc>) to switch Java versions. Type `/setup` to set up Prism for speedrunning.\n"
         else: # multimc
-            text += "* If you're using MultiMC: use [**this video guide**](<https://youtu.be/WGFEMkWilK0>) or read the instructions below to update your Java version.\n"
-            if os == "Linux":
-                text += f"  * You can install the latest version of Java [**here**](<https://www.google.com/search?q=%7Binsert+your+distro+name+here%7D+how+to+install+java+21>).\n"
-            elif os == "Windows":
-                    text += "  * On Windows, install the latest version of Java by downloading **and running** the Microsoft Java installer: <https://aka.ms/download-jdk/microsoft-jdk-21-windows-x64.msi>.\n"
-                    text += "    * When prompted, it is recommended you install Java **for all users**.\n"
-            else: # macos
-                query_string = "?os=mac&package=jdk&version=21&mode=filter"
-                text += f"*  * On macOS, you can install the latest version of Java [**here**](<https://adoptium.net/temurin/releases/{query_string}>)."
-                text += " Download and run the `.pkg` file.\n"
+            if java_25:
+                text += "Use [**this guide**](<https://gist.github.com/maskersss/574d81800bfd1051c4f3315ccc825c64#multimc>) to update your Java version.\n"
+            else:
+                text += "* If you're using MultiMC: use [**this video guide**](<https://youtu.be/WGFEMkWilK0>) or read the instructions below to update your Java version.\n"
+                if os == "Linux":
+                    text += f"  * You can install the latest version of Java [**here**](<https://www.google.com/search?q=%7Binsert+your+distro+name+here%7D+how+to+install+java+21>).\n"
+                elif os == "Windows":
+                        text += "  * On Windows, install the latest version of Java by downloading **and running** the Microsoft Java installer: <https://aka.ms/download-jdk/microsoft-jdk-21-windows-x64.msi>.\n"
+                        text += "    * When prompted, it is recommended you install Java **for all users**.\n"
+                else: # macos
+                    query_string = "?os=mac&package=jdk&version=21&mode=filter"
+                    text += f"*  * On macOS, you can install the latest version of Java [**here**](<https://adoptium.net/temurin/releases/{query_string}>)."
+                    text += " Download and run the `.pkg` file.\n"
 
             text += "  * After installing Java, follow the steps in the image below[:](https://cdn.discordapp.com/attachments/433058639956410383/1172533931485175879/image.png)\n"
             text += "    * If the Java you installed doesn't show up, click `Refresh` on the bottom left in the `Auto-detect` menu.\n"
@@ -396,6 +406,14 @@ Older tutorials: https://discord.com/channels/83066801105145856/4330586399564103
     @commands.slash_command(name="discords", description="Gives a link to the MCSR discords spreadsheet.")
     async def discords(self, ctx: discord.ApplicationContext, mention: discord.Option(discord.Member, "User to ping with the response", required=False, default=None)):
         text = "https://docs.google.com/spreadsheets/d/1W5D6sxqBfIdyxS1pVEAi2ZaFhOhj4x-9bZwD39HbgLo"
+        return await self._respond(ctx, text, mention)
+
+    @commands.slash_command(name="draftout", description="Explains what Draftout is.")
+    async def draftout(self, ctx: discord.ApplicationContext, mention: discord.Option(discord.Member, "User to ping with the response", required=False, default=None)):
+        text = """## Draftout
+Share a 5x5 board of goals with your opponent. - First to 13 goals wins.
+<https://draftoutmc.com/> (Works on recent version, not 1.16.1)
+Discord: <https://discord.gg/NSpJHVRgAR>"""
         return await self._respond(ctx, text, mention)
 
     @commands.slash_command(name="divine", description="Gives an infographic for nether fossil divine.")
@@ -556,16 +574,26 @@ Adding mob_spawner mirror with Toolscreen (timestamped): <https://youtu.be/LG13l
     async def piedirectory(
         self,
         ctx: discord.ApplicationContext,
+        draftout: discord.Option(bool, "Whether to give a response for Draftout", choices=[True, False], required=False, default=False),
         directory: discord.Option(str, choices=["Mapless / Preemptive", "Village / Fortress", "All"], required="False", default="All"),
         mention: discord.Option(discord.Member, "User to ping with the response", required=False, default=None),
     ):
-        text = "Common piechart directories:"
+        if draftout: text = "Common piechart directories on 26.1.1:"
+        else: text = "Common piechart directories on 1.16.1:"
+
         if directory in ["Mapless / Preemptive", "All"]:
-            text += "\n- Mapless / Preemptive: ```root.gameRenderer.level.entities```"
+            if draftout:
+                text += "\n- Mapless / Preemptive: ```root.frame.extract.level```\n-# look at the # of blockEntities, or you can press into blockEntities and look at the number top right"
+            else:
+                text += "\n- Mapless / Preemptive: ```root.gameRenderer.level.entities```"
         if directory in ["Village / Fortress", "All"]:
-            text += "\n- Village / Fortress: ```root.tick.level.entities.blockEntities```"""
+            if draftout:
+                text += "\n- Village / Fortress: ```root.tick.blockEntities```"""
+            else:
+                text += "\n- Village / Fortress: ```root.tick.level.entities.blockEntities```"""
         
-        text += "\nIf you're using the StandardSettings mod, you can paste it into the `Pie Directory` option in `Options > Book and Quill > StandardSettings` to reset your pie chart to the given directory on reset."
+        if not draftout:
+            text += "\nIf you're using the StandardSettings mod, you can paste it into the `Pie Directory` option in `Options > Book and Quill > StandardSettings` to reset your pie chart to the given directory on reset."
 
         return await self._respond(ctx, text, mention)
 
@@ -791,7 +819,18 @@ Vertical (up and down) lineup does not matter. The eye always rises to the same 
         return await self._respond(ctx, text, mention)
 
     @commands.slash_command(name="gamma", description="Gives a guide for increasing brightness past 100%.")
-    async def gamma(self, ctx: discord.ApplicationContext, mention: discord.Option(discord.Member, "User to ping with the response", required=False, default=None)):
+    async def gamma(
+        self,
+        ctx: discord.ApplicationContext,
+        draftout: discord.Option(bool, "Whether to give a response for Draftout", choices=[True, False], required=False, default=False),
+        mention: discord.Option(discord.Member, "User to ping with the response", required=False, default=None),
+    ):
+        if draftout:
+            text = f"""It is legal to set gamma to up to 5.0.
+On latest Minecraft versions, you have to use the Planifolia mod. With it you can adjust the brightness level up to 500% in-game via `Options > Video Settings` in the title screen, **not** in the world.
+You can download Planifolia, as well as all other legal mods, from <https://mods.tildejustin.dev/?version=26.1.1>."""
+            return await self._respond(ctx, text, mention)
+        
         cmd_prefix = "/"
         in_channel = ""
         for server_id, support_cid, bot_cid in SERVER_SUPPORT_BOT_CHANNEL_IDS:
@@ -801,7 +840,7 @@ Vertical (up and down) lineup does not matter. The eye always rises to the same 
                 break
         
         text = f"""It is legal to set gamma to up to 5.0.
-If you're using Speedrunning Sodium or Planifolia, you can adjust the brightness level up to 500% in-game via `Options > Video Settings` in the title screen.
+If you're using Speedrunning Sodium or Planifolia, you can adjust the brightness level up to 500% in-game via `Options > Video Settings` in the title screen, **not** in the world.
 Otherwise, open your `options.txt` file in your Minecraft directory and change the value next to `gamma` to `5.0`, or do `{cmd_prefix}setup`{in_channel} for a guide on setting up mods."""
         return await self._respond(ctx, text, mention)
 

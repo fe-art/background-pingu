@@ -330,6 +330,7 @@ class Log:
             "com.redlimerl.mcsrlauncher",
             "/MCSRLauncher",
             "\\MCSRLauncher",
+            "MCSR Launcher version: ",
         ]):
             return Launcher.MCSRLAUNCHER
         
@@ -426,7 +427,7 @@ class Log:
     def mod_loader(self) -> ModLoader | None:
         if self.type == LogType.LAUNCHER_LOG: return None
         
-        match = re.compile(r"Main Class:\n(.*)\n").search(self._content)
+        match = re.compile(r"Main (?:C|c)lass:\s*(.*)\n").search(self._content)
         if not match is None:
             line = match.group(1)
             for loader in ModLoader:
@@ -688,13 +689,18 @@ class Log:
         if self.launcher == Launcher.OFFICIAL_LAUNCHER:
             return self.setup_guide
         
+        use_java_25 = self.is_newer_than("1.20.5")
         if self.is_prism:
+            if use_java_25: return "java_update_guide_prism_25"
             return "java_update_guide_prism"
         if self.is_multimc_or_fork:
+            if use_java_25: return "java_update_guide_mmc_25"
             return "java_update_guide_mmc"
         if self.is_mcsrlauncher:
+            if use_java_25: return "java_update_guide_mcsrlauncher_25"
             return "java_update_guide_mcsrlauncher"
         if self.launcher == Launcher.MODRINTH:
+            if use_java_25: return "java_update_guide_modrinth_25"
             return "java_update_guide_modrinth"
 
         if self.operating_system == OperatingSystem.LINUX:
@@ -703,6 +709,7 @@ class Log:
         if self.launcher in [Launcher.ATLAUNCHER, Launcher.JINGLE]:
             return None
 
+        if use_java_25: return "java_update_guide_25"
         return "java_update_guide"
     
     @cached_property
@@ -791,6 +798,17 @@ class Log:
         return False
 
     @cached_property
+    def is_draftout_log(self) -> bool:
+        for mod in [
+            "draftout",
+        ]:
+            if self.has_mod(mod): return True
+        
+        if self.has_content("com.draftoutmc"): return True
+        
+        return False
+
+    @cached_property
     def is_seedqueue_log(self) -> bool:
         if self.is_ranked_log: return False
         if self.has_mod("seedqueue"): return True
@@ -846,7 +864,7 @@ class Log:
                 "chunkcacher",
                 "speedrunigt",
             ]
-        elif not self.has_mod("mcsrranked") and not self.has_mod("peepopractice"):
+        elif not self.has_mod("mcsrranked") and not self.has_mod("peepopractice") and not self.is_draftout_log:
             mods += [
                 "antigone",
                 "speedrunigt",
@@ -870,6 +888,26 @@ class Log:
         for java_arg in self.java_arguments.split(" "):
             if arg.lower() in java_arg.lower(): return java_arg.strip().strip('[],')
         return arg
+    
+    def get_mod_version(self, mod_name: str) -> version.Version | None:
+        target_mod = None
+        for mod in self.whatever_mods[::-1]:
+            if mod_name.lower() in mod.lower():
+                target_mod = mod
+                break
+
+        if target_mod is None:
+            return None
+
+        match = re.search(r"(\d+\.\d+(?:\.\d+)?)", target_mod)
+        if match is None:
+            return None
+
+        extracted_version = match.group(1)
+        try:
+            return version.parse(extracted_version)
+        except version.InvalidVersion:
+            return None
     
     def is_newer_than(self, compared_version: str) -> bool:
         if self.parsed_mc_version is None: return False
@@ -959,6 +997,7 @@ stacktrace={self.stacktrace}
 exitcode={self.exitcode}
 is_ssg_log={self.is_ssg_log}
 is_ranked_log={self.is_ranked_log}
+is_draftout_log={self.is_draftout_log}
 is_seedqueue_log={self.is_seedqueue_log}
 is_log={self.is_log}
 recommended_mods={self.recommended_mods}

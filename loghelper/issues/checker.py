@@ -56,12 +56,14 @@ class IssueChecker:
             "forceport",
         ]
         self.assume_as_legal = [
+            "draftout",
             "mcsrranked",
             "mangodfps",
             "statsperreset",
             "ninjabrain-bot",
         ] + self.not_mods
         self.mcsr_mods = [
+            "draftout",
             "worldpreview",
             "anchiale",
             "sleepbackground",
@@ -193,6 +195,7 @@ class IssueChecker:
         if not self.log.minecraft_version is None: footer += f" {self.log.minecraft_version}"
 
         if self.log.is_ranked_log: footer += " Ranked"
+        elif self.log.is_draftout_log: footer += " Draftout"
         elif self.log.is_ssg_log: footer += " SSG"
         elif is_mcsr_log: footer += " RSG"
         elif not self.log.mod_loader is None: footer += f" {self.log.mod_loader.value}"
@@ -802,6 +805,7 @@ class IssueChecker:
         if (is_mcsr_log
             and not self.log.java_arguments is None
             and (self.log.pc_ram is None or self.log.pc_ram > 5000)
+            and not self.log.is_newer_than("1.20.5")
         ):
             temp = False
             if not self.log.has_java_argument("UseZGC"):
@@ -992,6 +996,14 @@ class IssueChecker:
             found_crash_cause = True
 
         if (not found_crash_cause
+            and self.log.launcher in [Launcher.MCSRLAUNCHER, None]
+            and self.log.is_newer_than("1.21.5")
+            and self.log.has_content("java.lang.ClassNotFoundException: org.lwjgl.Version")
+        ):
+            builder.error("mcsrlauncher_lwjgl", experimental=not bool(self.log.launcher))
+            found_crash_cause = True
+        
+        if (not found_crash_cause
             and self.log.launcher in [None, Launcher.MULTIMC]
             and (self.log.is_newer_than("1.20") or not self.log.is_newer_than("1.1")) # so it works on snapshots too
             and self.log.has_content("[LWJGL] Failed to load a library. Possible solutions:")
@@ -1161,56 +1173,18 @@ class IssueChecker:
                     pass
         # toolscreen end
 
-        ranked_mod = None
-        for mod in self.log.whatever_mods[::-1]:
-            if "mcsrranked" in mod.lower():
-                ranked_mod = mod
-                break
-        if not ranked_mod is None:
-            match = re.search(r"(\d+\.\d+(\.\d+)?)", ranked_mod)
-        else: match = None
+        for (filename, needed_ver, mod_name, update_link) in MINIMUM_MOD_VERSIONS:
+            mod_ver = self.log.get_mod_version(filename)
+            needed_ver = version.parse(needed_ver)
+            if not mod_ver is None and mod_ver < needed_ver:
+                builder.error("old_mod_version", mod_name, update_link)
+                if self.log.is_prism: builder.add("update_mods_prism")
+                if (self.log.type == LogType.FULL_LOG
+                    or not self.log.is_multimc_or_fork
+                ): found_crash_cause = True
         
-        if not match is None:
-            extracted_version = match.group(1)
-            try:
-                extracted_version = version.parse(extracted_version)
-                needed_version = version.parse("5.7.12")
-
-                if extracted_version < needed_version:
-                    builder.error("old_mod_version", "MCSR Ranked", "https://modrinth.com/mod/mcsr-ranked/versions/")
-                    if self.log.is_prism: builder.add("update_mods_prism")
-                    if (self.log.type == LogType.FULL_LOG
-                        or not self.log.is_multimc_or_fork
-                    ): found_crash_cause = True
-            except version.InvalidVersion:
-                pass
-        
-        fsg_mod = None
-        for mod in self.log.whatever_mods:
-            if "fsg-mod" in mod.lower():
-                fsg_mod = mod
-                break
-        if not fsg_mod is None:
-            match = re.search(r"(\d+\.\d+(\.\d+)?)", fsg_mod)
-        else: match = None
-        
-        if not match is None:
-            extracted_version = match.group(1)
-            try:
-                extracted_version = version.parse(extracted_version)
-                needed_version = version.parse("2.4.1")
-
-                if extracted_version < needed_version:
-                    builder.error("old_mod_version", "fsg-mod", "https://modrinth.com/mod/fsg-mod/versions/")
-                    if (self.log.is_prism
-                        and not extracted_version == version.parse("2.4.0") # duncan deleted 2.4.0 lol
-                    ): builder.add("update_mods_prism")
-                    found_crash_cause = True
-            except version.InvalidVersion:
-                pass
-
-            if self.log.has_mod("beachfilter"):
-                builder.error("incompatible_mod", "beachfilter", "fsg-mod")
+        if self.log.has_mod("fsg-mod") and self.log.has_mod("beachfilter"):
+            builder.error("incompatible_mod", "beachfilter", "fsg-mod")
 
         if (self.log.has_mod("peepopractice")
             and (self.log.has_mod("peepopractice-1")
@@ -1263,6 +1237,10 @@ class IssueChecker:
             builder.error("old_mod_crash", "SpeedrunAPI", "https://mods.tildejustin.dev/")
             found_crash_cause = True
 
+        if self.log.has_content("Remove the disallowed mods and restart Minecraft."):
+            builder.error("read")
+            found_crash_cause = True
+        
         match = re.search(r"Incompatible mod set found! READ THE BELOW LINES!(.*?$)", self.log._content, re.DOTALL)
         if not match is None:
             found_crash_cause = True
@@ -1397,9 +1375,12 @@ class IssueChecker:
         
         if (not found_crash_cause
             and not self.log.is_multimc_or_fork
-            and self.log.has_content("Non [a-z0-9/._-] character in path of location")
+            and any(self.log.has_content(weird_char) for weird_char in [
+                "İ",
+                "ı",
+            ])
         ):
-            experimental = not (self.log.is_ranked_log or self.log.has_content("mcsrranked") or self.log.has_content("ı"))
+            experimental = not self.log.is_draftout_log
             builder.error(
                 "turkish_crash",
                 experimental=experimental,
@@ -1456,7 +1437,11 @@ class IssueChecker:
                     found_crash_cause = True
             elif any(self.log.has_content_in_stacktrace(lib) for lib in ["GLFW", "OpenAL"]):
                 if self.log.is_waywall_log:
-                    builder.error("builtin_lib_crash_waywall", temp, experimental=True)
+                    if self.log.is_newer_than("1.21.9"):
+                        builder.error("waywall_dont_use_glfw_latest")
+                        found_crash_cause = True
+                    else:
+                        builder.error("builtin_lib_crash_waywall", temp, experimental=True)
                 else:
                     builder.error(
                         "builtin_lib_prob_crash",
@@ -1570,8 +1555,9 @@ class IssueChecker:
                 found_crash_cause = True
 
         if not self.log.minecraft_folder is None:
-            if "!" in self.log.minecraft_folder:
+            if "!\\" in self.log.minecraft_folder or "!/" in self.log.minecraft_folder:
                 builder.error("exclamation_mark_in_path")
+                found_crash_cause = True
             if not found_crash_cause and "OneDrive" in self.log.minecraft_folder:
                 builder.note("onedrive")
             if "C:/Program Files" in self.log.minecraft_folder:
@@ -1610,6 +1596,17 @@ class IssueChecker:
         ):
             builder.error("unsupported_intel_gpu", experimental=True)
         
+        elif ((self.log.major_java_version is None
+               or self.log.major_java_version >= 25)
+            and not self.log.has_java_argument("-XX:CompileCommand=exclude,io/netty/util/internal/ReferenceCountUpdater,retryRelease0")
+            and self.log.has_pattern(r"  \[jvm\.dll[+ ]0x2cd888\]")
+            # also 0x2c6a18 ?
+        ):
+            builder.error("eav_crash", experimental=True)
+            if self.log.is_newer_than("1.20.5"): builder.add("eav_crash_java_25")
+            else: builder.add("eav_crash_java_25_2")
+            found_crash_cause = True
+        
         elif (len(self.log.whatever_mods) == 0 or self.log.has_mod("xaero")) and self.log.has_content("Field too big for insn"):
             wrong_mods = [mod for mod in self.log.whatever_mods if "xaero" in mod.lower()]
             if len(wrong_mods) == 1: wrong_mods == ["xaero"]
@@ -1620,6 +1617,14 @@ class IssueChecker:
             or self.log.has_content("EXCEPTION_ACCESS_VIOLATION")
         ):
             builder.error("eav_crash", experimental=True)
+            
+            if ((self.log.major_java_version is None
+                 or self.log.major_java_version >= 25)
+                and not self.log.has_java_argument("-XX:CompileCommand=exclude,io/netty/util/internal/ReferenceCountUpdater,retryRelease0")
+                and self.log.has_content("  [jvm.dll")
+            ):
+                if self.log.is_newer_than("1.20.5"): builder.add("eav_crash_java_25", bold=True)
+                else: builder.add("eav_crash_java_25_2", bold=True)
             if self.log.has_pattern(r"  \[ntdll\.dll\+(0x[0-9a-f]+)\]"):
                 builder.add("eav_crash_obs", bold=True)
                 builder.add("eav_crash_obs_1", bold=True)
@@ -1948,6 +1953,26 @@ class IssueChecker:
                     
                     if asking_for_help_total >= 2 and leave_total >= 10 and wall_total >= 10:
                         builder.error("exit_wall")
+                    
+                    gamma_indicators = {
+                        r"full ?bright": 50,
+                        r"gamma ?5": 50,
+                        "gamma": 5,
+                        "500": 4,
+                        "cave": 3,
+                        "ocean": 3,
+                        "see": 5,
+                    }
+                    gamma_total = 0
+                    for pattern, value in gamma_indicators.items():
+                        if self.log.has_pattern(pattern):
+                            gamma_total += value
+                    
+                    if asking_for_help_total >= 2 and gamma_total >= 10:
+                        if self.channel_id == 1495250366873206965: # draftoutcord
+                            builder.error("gamma_draftout")
+                        else:
+                            builder.error("gamma")
                 
                 if (not found_crash_cause
                     and not self.log.type in [LogType.FULL_LOG, LogType.LAUNCHER_LOG, LogType.THREAD_DUMP, LogType.TOOLSCREEN_LOG]

@@ -13,6 +13,7 @@ SERVER_SUPPORT_BOT_CHANNEL_IDS = [
     (1095808506239651942, 1424239180313264250, 1467700446989910199), # linuxcord
     (933654537057738812 , 933914673437368380 , 1123664786341773432), # fsgcord
     (1033677387143061574, 1033763530798800908, None               ), # srigtcord
+    (1493030345048719483, 1495250366873206965, 1507390946910928916), # draftoutcord
     (781169188550869022 , 1071138999604891729, None               ), # for testing
 ]
 
@@ -20,4 +21,11 @@ IGNORED_USERS = [
     473868086773153793,    # zeppelin
     1110166332059697222,   # pingu
     834848683697635328,    # test
+]
+
+MINIMUM_MOD_VERSIONS = [
+    # mod name substring,  version, name         , update link
+    ("mcsrranked"       , "5.7.12", "MCSR Ranked", "https://modrinth.com/mod/mcsr-ranked/versions/"),
+    ("draftout"         , "1.9.0" , "Draftout"   , "https://modrinth.com/mod/draftout/versions/"   ),
+    ("fsg-mod"          , "2.4.1" , "FSG Mod"    , "https://modrinth.com/mod/fsg-mod/versions/"    ),
 ]
